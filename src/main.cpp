@@ -1,0 +1,131 @@
+#include <iostream>
+#include <fstream>
+#include <cstdarg>
+#include "os.hpp"
+#include "mystl.hpp"
+
+using std::cout;
+using std::endl;
+
+std::string get_output_name(const std::string& input_file);
+std::string format_str(const std::string text, ...);
+std::string get_transcription(const std::string& output);
+std::string read_file(const std::string& filename);
+std::string transcription_to_srt(const std::string& transcript);
+void write_file(const std::string& filename, const std::string& text);
+
+int main(int argc, char** argv)
+{
+    if (argc > 1) {
+        std::string filename = argv[1];
+        std::string output = get_output_name(filename) + ".wav";
+        std::string extraction_cmd = format_str("ffmpeg -i %s -vn -acodec pcm_s16le -ar 16000 -ac 1 %s", filename.c_str(), output.c_str());
+        std::pair<int, std::string> res = OS::run_command(extraction_cmd);
+        // The whisper command is: <path>/<to>/whisper-cpp/build/bin/whisper-cli -m <path>/<to>/whisper-cpp/models/ggml-base.en.bin -f <WAV_file>  
+        std::string whisper_cmd = read_file("whisper-cmd.txt") + output; 
+        std::pair<int, std::string> res2 = OS::run_command(whisper_cmd);
+        std::string transcription = get_transcription(res2.second);
+        transcription = transcription_to_srt(transcription);
+        write_file("transcript.srt", transcription);
+        std::string transcript_path = read_file("transcript-path.txt");
+        std::string burn_cmd = format_str("ffmpeg -i %s -vf subtitles=%s -c:a copy %s_w_captions.mp4", filename.c_str(), transcript_path.c_str(), get_output_name(filename).c_str());
+        std::pair<int, std::string> res3 = OS::run_command(burn_cmd);
+        if (res3.first == 0) cout << "Captions added successfully!" << endl;
+    }
+    else {
+        cout << "Usage: blcap <video_file>" << endl;
+    }
+    return 0;
+}
+
+std::string format_str(const std::string text, ...)
+{
+    va_list args;
+    va_start(args, text);
+    int size = vsnprintf(nullptr, 0, text.c_str(), args); // Get required size
+    va_end(args);
+    if (size < 0) return "";  
+    std::string buffer(size, '\0'); // Allocate std::string with correct size
+    va_start(args, text);
+    vsnprintf(&buffer[0], size + 1, text.c_str(), args); // Fill buffer
+    va_end(args);
+    return buffer;
+}
+
+std::string get_output_name(const std::string& input_file)
+{
+    size_t pos = input_file.find(".");
+    if (pos == -1) return input_file;
+    return input_file.substr(0, pos);
+}
+
+int transcribe_audio(const std::string& audioFile, const std::string& transcriptFile) 
+{
+    std::string command = "./whisper -m models/medium.en.bin -f " + audioFile + " -otxt";
+    return system(command.c_str());
+}
+
+std::string read_file(const std::string& filename)
+{
+    std::fstream file(filename.c_str());
+    if (!file.is_open()) {
+        std::cerr << "Error opening file." << endl;
+        exit(1);
+    }
+    char c;
+    std::string result = "";
+    while (file.get(c)) result += c;
+    return result;
+}
+
+void write_file(const std::string& filename, const std::string& text)
+{
+    std::ofstream file(filename.c_str());
+    if (file.is_open()) {
+        file << text;
+        return;
+    }
+    std::cerr << "Error opening file" << endl;
+    exit(1);
+}
+
+std::string get_transcription(const std::string& output)
+{
+    my::string temp = output;
+    my::vector<my::string> lines = temp.split("\n");
+    my::vector<my::string> temp_vec;
+    for (const my::string& line : lines) {
+        if (line.str().starts_with("[")) temp_vec.emplace(line);
+    }
+    return temp_vec.join("\n");
+}
+
+my::string convert_line(const my::string& line, size_t current)
+{
+    size_t end_bracket = line.str().find("]") + 1;
+    my::string timestamp = line.str().substr(0, end_bracket);
+    while (timestamp.contains(".")) {
+        size_t pos = timestamp.str().find(".");
+        timestamp[pos] = ',';
+    }
+    timestamp = timestamp.str().substr(1, timestamp.size()-2);
+    my::string text = line.str().substr(end_bracket+1);
+    text = text.trim();
+    my::string result = format_str("%d\n%s\n%s", current, timestamp.str().c_str(), text.str().c_str());
+    return result;
+}
+
+std::string transcription_to_srt(const std::string& transcript)
+{
+    my::string temp = transcript;
+    my::vector<my::string> lines = temp.split("\n");
+    size_t current = 1;
+    my::vector<my::string> temp_vec;
+    for (my::string line : lines) {
+        my::string new_line = convert_line(line, current++);
+        temp_vec.emplace(new_line);
+    }
+    return temp_vec.join("\n\n").trim();
+}
+
+
