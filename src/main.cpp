@@ -27,10 +27,13 @@ int main(int argc, char** argv)
         std::string transcription = get_transcription(res2.second);
         transcription = transcription_to_srt(transcription);
         write_file("transcript.srt", transcription);
+        // Absolute path where `transcript.srt` can be found.
         std::string transcript_path = read_file("transcript-path.txt");
         std::string burn_cmd = format_str("ffmpeg -i %s -vf subtitles=%s -c:a copy %s_w_captions.mp4", filename.c_str(), transcript_path.c_str(), get_output_name(filename).c_str());
         std::pair<int, std::string> res3 = OS::run_command(burn_cmd);
         if (res3.first == 0) cout << "Captions added successfully!" << endl;
+        std::string remove_cmd = "rm " + output;
+        std::pair<int, std::string> res4 = OS::run_command(remove_cmd);
     }
     else {
         cout << "Usage: blcap <video_file>" << endl;
