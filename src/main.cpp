@@ -19,21 +19,43 @@ int main(int argc, char** argv)
     if (argc > 1) {
         std::string filename = argv[1];
         std::string output = get_output_name(filename) + ".wav";
-        std::string extraction_cmd = format_str("ffmpeg -i %s -vn -acodec pcm_s16le -ar 16000 -ac 1 %s", filename.c_str(), output.c_str());
+        std::string hw_encoder;
+        std::string encoding_flag;
+    #if defined(OS_MACOS)
+        hw_encoder = "auto";
+        encoding_flag = " -c:v h264_videotoolbox ";
+    #elif defined(OS_LINUX)
+        hw_encoder = "vaapi";
+        encoding_flag = " -c:v h264_vaapi -vf 'format=nv12,hwupload' ";
+    #elif defined(OS_WINDOWS)
+        hw_encoder = "qsv";
+        encoding_flag = " -c:v h264_qsv ";
+    #else
+        hw_encoder = "auto";
+        encoding_flag = "";
+    #endif
+        std::string extraction_cmd = format_str("ffmpeg -hwaccel %s -i %s%s-vn -acodec pcm_s16le -ar 16000 -ac 1 %s", hw_encoder.c_str(), filename.c_str(), encoding_flag.c_str(), output.c_str());
         std::pair<int, std::string> res = OS::run_command(extraction_cmd);
-        // The whisper command is: <path>/<to>/whisper-cpp/build/bin/whisper-cli -m <path>/<to>/whisper-cpp/models/ggml-base.en.bin -f <WAV_file>  
-        std::string whisper_cmd = read_file("whisper-cmd.txt") + output; 
+        // The whisper command is: <path>/<to>/whisper-cpp/build/bin/whisper-cli -m <path>/<to>/whisper-cpp/models/ggml-base.en.bin -f <WAV_file>
+        std::string whisper_cmd = read_file("whisper-cmd.txt") + output;
+        cout << extraction_cmd << endl;
+        cout << res.first << endl;
+        cout << res.second << endl;
         std::pair<int, std::string> res2 = OS::run_command(whisper_cmd);
         std::string transcription = get_transcription(res2.second);
+        cout << res2.first << endl;
+        cout << res2.second << endl;
         transcription = transcription_to_srt(transcription);
         write_file("transcript.srt", transcription);
         // Absolute path where `transcript.srt` can be found.
         std::string transcript_path = read_file("transcript-path.txt");
-        std::string burn_cmd = format_str("ffmpeg -i %s -vf subtitles=%s -c:a copy %s_w_captions.mp4", filename.c_str(), transcript_path.c_str(), get_output_name(filename).c_str());
+        std::string burn_cmd = format_str("ffmpeg -hwaccel %s -i %s%s-vf subtitles=%s -c:a copy %s_w_captions.mp4", hw_encoder.c_str(), filename.c_str(), encoding_flag.c_str() ,transcript_path.c_str(), get_output_name(filename).c_str());
         std::pair<int, std::string> res3 = OS::run_command(burn_cmd);
         if (res3.first == 0) cout << "Captions added successfully!" << endl;
         std::string remove_cmd = "rm " + output;
         std::pair<int, std::string> res4 = OS::run_command(remove_cmd);
+        cout << res3.first << endl;
+        cout << res3.second << endl;
     }
     else {
         cout << "Usage: blcap <video_file>" << endl;
@@ -47,7 +69,7 @@ std::string format_str(const std::string text, ...)
     va_start(args, text);
     int size = vsnprintf(nullptr, 0, text.c_str(), args); // Get required size
     va_end(args);
-    if (size < 0) return "";  
+    if (size < 0) return "";
     std::string buffer(size, '\0'); // Allocate std::string with correct size
     va_start(args, text);
     vsnprintf(&buffer[0], size + 1, text.c_str(), args); // Fill buffer
@@ -62,7 +84,7 @@ std::string get_output_name(const std::string& input_file)
     return input_file.substr(0, pos);
 }
 
-int transcribe_audio(const std::string& audioFile, const std::string& transcriptFile) 
+int transcribe_audio(const std::string& audioFile, const std::string& transcriptFile)
 {
     std::string command = "./whisper -m models/medium.en.bin -f " + audioFile + " -otxt";
     return system(command.c_str());
