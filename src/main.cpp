@@ -34,7 +34,13 @@ int main(int argc, char** argv)
         hw_encoder = "auto";
         encoding_flag = "";
     #endif
-        std::string extraction_cmd = format_str("ffmpeg -hwaccel %s -i %s%s-vn -acodec pcm_s16le -ar 16000 -ac 1 %s", hw_encoder.c_str(), filename.c_str(), encoding_flag.c_str(), output.c_str());
+        std::string extraction_cmd = format_str(
+            "ffmpeg -hwaccel %s -i %s%s-vn -acodec pcm_s16le -ar 16000 -ac 1 %s", 
+            hw_encoder.c_str(), 
+            filename.c_str(), 
+            encoding_flag.c_str(), 
+            output.c_str()
+        );
         std::pair<int, std::string> res = OS::run_command(extraction_cmd);
         // The whisper command is: <path>/<to>/whisper-cpp/build/bin/whisper-cli -m <path>/<to>/whisper-cpp/models/ggml-base.en.bin -f <WAV_file>
         std::string whisper_cmd = read_file("whisper-cmd.txt") + output;
@@ -49,7 +55,14 @@ int main(int argc, char** argv)
         write_file("transcript.srt", transcription);
         // Absolute path where `transcript.srt` can be found.
         std::string transcript_path = read_file("transcript-path.txt");
-        std::string burn_cmd = format_str("ffmpeg -hwaccel %s -i %s%s-vf subtitles=%s -c:a copy %s_w_captions.mp4", hw_encoder.c_str(), filename.c_str(), encoding_flag.c_str() ,transcript_path.c_str(), get_output_name(filename).c_str());
+        std::string burn_cmd = format_str(
+            "ffmpeg -hwaccel %s -i %s%s-vf subtitles=%s -c:a copy %s_w_captions.mp4", 
+            hw_encoder.c_str(), 
+            filename.c_str(), 
+            encoding_flag.c_str(), 
+            transcript_path.c_str(), 
+            get_output_name(filename).c_str()
+        );
         std::pair<int, std::string> res3 = OS::run_command(burn_cmd);
         if (res3.first == 0) cout << "Captions added successfully!" << endl;
         std::string remove_cmd = "rm " + output;
