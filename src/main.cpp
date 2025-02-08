@@ -35,7 +35,7 @@ int main(int argc, char** argv)
         encoding_flag = "";
     #endif
         std::string extraction_cmd = format_str(
-            "ffmpeg -hwaccel %s -i %s%s-vn -acodec pcm_s16le -ar 16000 -ac 1 %s", 
+            "ffmpeg -y -hwaccel %s -i %s%s-vn -acodec pcm_s16le -ar 16000 -ac 1 %s", 
             hw_encoder.c_str(), 
             filename.c_str(), 
             encoding_flag.c_str(), 
@@ -44,19 +44,20 @@ int main(int argc, char** argv)
         std::pair<int, std::string> res = OS::run_command(extraction_cmd);
         // The whisper command is: <path>/<to>/whisper-cpp/build/bin/whisper-cli -m <path>/<to>/whisper-cpp/models/ggml-base.en.bin -f <WAV_file>
         std::string whisper_cmd = read_file("whisper-cmd.txt") + output;
-        cout << extraction_cmd << endl;
-        cout << res.first << endl;
-        cout << res.second << endl;
         std::pair<int, std::string> res2 = OS::run_command(whisper_cmd);
+        cout << "Getting transcription..." << endl;
         std::string transcription = get_transcription(res2.second);
-        cout << res2.first << endl;
-        cout << res2.second << endl;
+        cout << "Transcription:\n" << transcription << "\n" << endl;
+        cout << "Converting to SRT format..." << endl;
         transcription = transcription_to_srt(transcription);
+        cout << "Transcription converted successfully!\n" << endl;
+        cout << "Writing SRT file..." << endl;
         write_file("transcript.srt", transcription);
+        cout << "File written successfully!\n" << endl; 
         // Absolute path where `transcript.srt` can be found.
         std::string transcript_path = read_file("transcript-path.txt");
         std::string burn_cmd = format_str(
-            "ffmpeg -hwaccel %s -i %s%s-vf subtitles=%s -c:a copy %s_w_captions.mp4", 
+            "ffmpeg -y -hwaccel %s -i %s%s-vf subtitles=%s -c:a copy %s_w_captions.mp4", 
             hw_encoder.c_str(), 
             filename.c_str(), 
             encoding_flag.c_str(), 
@@ -64,11 +65,10 @@ int main(int argc, char** argv)
             get_output_name(filename).c_str()
         );
         std::pair<int, std::string> res3 = OS::run_command(burn_cmd);
-        if (res3.first == 0) cout << "Captions added successfully!" << endl;
+        cout << "Burning captions..." << endl;
+        if (res3.first == 0) cout << "Captions added successfully!\n" << endl;
         std::string remove_cmd = "rm " + output;
         std::pair<int, std::string> res4 = OS::run_command(remove_cmd);
-        cout << res3.first << endl;
-        cout << res3.second << endl;
     }
     else {
         cout << "Usage: blcap <video_file>" << endl;
@@ -81,12 +81,13 @@ std::string format_str(const std::string text, ...)
     va_list args;
     va_start(args, text);
     int size = vsnprintf(nullptr, 0, text.c_str(), args); // Get required size
-    va_end(args);
+    va_end(args); // `args` is consumed here
     if (size < 0) return "";
     std::string buffer(size, '\0'); // Allocate std::string with correct size
-    va_start(args, text);
-    vsnprintf(&buffer[0], size + 1, text.c_str(), args); // Fill buffer
-    va_end(args);
+    va_list args2;
+    va_start(args2, text);
+    vsnprintf(&buffer[0], size + 1, text.c_str(), args2); // Fill buffer
+    va_end(args2);
     return buffer;
 }
 
@@ -105,15 +106,12 @@ int transcribe_audio(const std::string& audioFile, const std::string& transcript
 
 std::string read_file(const std::string& filename)
 {
-    std::fstream file(filename.c_str());
-    if (!file.is_open()) {
-        std::cerr << "Error opening file." << endl;
+    std::ifstream file(filename); // Open in read mode
+    if (!file) {
+        std::cerr << "Error opening file: " << filename << std::endl;
         exit(1);
     }
-    char c;
-    std::string result = "";
-    while (file.get(c)) result += c;
-    return result;
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 }
 
 void write_file(const std::string& filename, const std::string& text)
