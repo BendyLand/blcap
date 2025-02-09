@@ -4,3 +4,4 @@ src/transcript-path.txt
 src/test*
 src/transcript.srt
 whisper-cpp
+src/summary.txt
