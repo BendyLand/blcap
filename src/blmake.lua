@@ -6,8 +6,8 @@
 
 Full_build = {
     compiler = "g++",           -- The compiler to be used (e.g., "gcc", "clang")
-    files = {"main.cpp", "os.cpp"}, -- A list of source files to compile (e.g., "main.cpp", "utils.cpp")
-    include_dirs = {},       -- Directories for include files 
+    files = {"main.cpp", "os.cpp", "utils.cpp"}, -- A list of source files to compile (e.g., "main.cpp", "utils.cpp")
+    include_dirs = {},       -- Directories for include files
     preproc_opts = {},       -- Preprocessor options (e.g., macros, include paths)
     linker_opts = {},        -- Paths to check for included dependencies
     dependencies = {},       -- Libraries to link against, e.g. {"lib1", "lib2"}
@@ -25,7 +25,7 @@ Full_build = {
     env_vars = {},           -- e.g., {CC = "gcc", CXX = "g++"}
     src_dir = "",            -- Source directory
     out_dir = "build",            -- Output directory
-    hooks = {},              -- e.g., {pre_build = "scripts/pre_build.sh"} 
+    hooks = {},              -- e.g., {pre_build = "scripts/pre_build.sh"}
     custom_flags = {},       -- e.g., {"-fno-stack-protector"}
     tests = {},              -- e.g., {"test_suite1", "test_suite2"}
     documentation = "",      -- Directory or command for generating docs
