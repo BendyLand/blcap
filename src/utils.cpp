@@ -83,7 +83,7 @@ std::string transcription_to_srt(str_arg transcript)
     my::vector<my::string> lines = temp.split("\n");
     size_t current = 1;
     my::vector<my::string> temp_vec;
-    for (my::string line : lines) {
+    for (const my::string& line : lines) {
         my::string new_line = convert_line(line, current++);
         temp_vec.emplace(new_line);
     }
@@ -94,18 +94,23 @@ std::string get_caption_cmd(int argc, char** argv, str_arg hw_encoder, str_arg f
 {
     std::string result;
     if (argc > 2) {
-        Flag f = parse_flags(argc, argv);
-        switch (f) {
-        case Flag::BURN:
-            result = construct_burn_cmd(hw_encoder, filename, encoding_flag, transcript_path);
-            break;
-        case Flag::SRT_ONLY:
-            result = "SRT_ONLY";
-            break;
-        default:
-            std::cout << "Invalid flag." << std::endl;
-            break;
+        std::set<Flag> flags = parse_flags(argc, argv);
+        if (flags.count(Flag::COMBINE)) {
+            if (flags.count(Flag::BURN)) {
+                result = construct_burn_cmd(hw_encoder, filename, encoding_flag, transcript_path);
+            } 
+            else {
+                result = format_str(
+                    "ffmpeg -y -i %s -i %s -c:v copy -c:a copy -c:s mov_text %s_w_captions.mp4",
+                    filename.c_str(),
+                    transcript_path.c_str(),
+                    get_output_name(filename).c_str()
+                );
+            }
         }
+        else if (flags.count(Flag::BURN)) result = construct_burn_cmd(hw_encoder, filename, encoding_flag, transcript_path);
+        else if (flags.count(Flag::SRT_ONLY)) result = "SRT_ONLY";
+        else std::cerr << "Invalid flag." << std::endl;
     }
     else {
         result = format_str(
@@ -117,6 +122,37 @@ std::string get_caption_cmd(int argc, char** argv, str_arg hw_encoder, str_arg f
     }
     return result;
 }
+
+
+// std::string get_caption_cmd(int argc, char** argv, str_arg hw_encoder, str_arg filename, str_arg encoding_flag, str_arg transcript_path)
+// {
+//     std::string result;
+//     if (argc > 2) {
+//         Flag f = parse_flags(argc, argv);
+//         switch (f) {
+//         case Flag::BURN:
+//             result = construct_burn_cmd(hw_encoder, filename, encoding_flag, transcript_path);
+//             break;
+//         case Flag::SRT_ONLY:
+//             result = "SRT_ONLY";
+//             break;
+//         case Flag::COMBINE:
+            
+//         default:
+//             std::cout << "Invalid flag." << std::endl;
+//             break;
+//         }
+//     }
+//     else {
+//         result = format_str(
+//             "ffmpeg -y -i %s -i %s -c:v copy -c:a copy -c:s mov_text %s_w_captions.mp4",
+//             filename.c_str(),
+//             transcript_path.c_str(),
+//             get_output_name(filename).c_str()
+//         );
+//     }
+//     return result;
+// }
 
 std::string construct_burn_cmd(str_arg hw_encoder, str_arg filename, str_arg encoding_flag, str_arg transcript_path)
 {
@@ -159,14 +195,16 @@ void log_err_and_exit(str_arg text, str_arg err_message)
     exit(1);
 }
 
-Flag parse_flags(int argc, char** argv) 
+std::set<Flag> parse_flags(int argc, char** argv) 
 {
-    for (size_t i = 1; i < argc; i++) {
+    std::set<Flag> result;
+    for (int i = 1; i < argc; i++) {
         std::string flag = get_flag(argv[i]);
-        if (flag == "burn") return Flag::BURN;
-        if (flag == "srt-only") return Flag::SRT_ONLY;
+        if (flag == "burn") result.insert(Flag::BURN);
+        if (flag == "srt-only") result.insert(Flag::SRT_ONLY);
+        if (flag == "combine") result.insert(Flag::COMBINE);
     }
-    return Flag::SOFT; 
+    return result;
 }
 
 std::pair<int, std::string> remove_temp_file(str_arg filepath) 
@@ -180,3 +218,12 @@ std::pair<int, std::string> remove_temp_file(str_arg filepath)
     return res;
 }
     
+std::string get_transcript_path(int argc, char** argv)
+{
+    for (int i = 0; i < argc; i++) {
+        my::string temp = argv[i];
+        if (temp.contains(".srt")) return temp;
+    }
+    std::cerr << "Unable to locate .srt file." << std::endl;
+    exit(1);
+}

@@ -36,17 +36,31 @@ int run(int argc, char** argv)
     hw_encoder = "auto";
     encoding_flag = " ";
 #endif
-    std::string extraction_cmd = get_extraction_cmd(hw_encoder, filename, encoding_flag, output);
-    std::pair<int, std::string> res = OS::run_command(extraction_cmd);
+    std::set<Flag> f = parse_flags(argc, argv);
+    std::string transcript_path;
+    std::pair<int, std::string> res;
+    std::string extraction_cmd;
+    std::string whisper_cmd;
+    std::string transcription;
+    switch (f.count(Flag::COMBINE)) {
+    case 1: 
+        transcript_path = get_transcript_path(argc, argv);
+        goto Captioning;
+        break;
+    default:
+        break;
+    }
+    extraction_cmd = get_extraction_cmd(hw_encoder, filename, encoding_flag, output);
+    res = OS::run_command(extraction_cmd);
     if (res.first != 0) log_err_and_exit("There was a problem extracting the transcript from the video.", res.second);
 
     // The whisper command is: <path>/<to>/whisper-cpp/build/bin/whisper-cli -m <path>/<to>/whisper-cpp/models/ggml-base.en.bin -f <WAV_file>
-    std::string whisper_cmd = read_file("whisper-cmd.txt") + output;
+    whisper_cmd = read_file("whisper-cmd.txt") + output;
     res = OS::run_command(whisper_cmd);
     if (res.first != 0) log_err_and_exit("There was a problem running Whisper.", res.second);
 
     std::cout << "Getting transcription..." << std::endl;
-    std::string transcription = get_transcription(res.second);
+    transcription = get_transcription(res.second);
     std::cout << "Transcription:\n" << transcription << "\n" << std::endl;
 
     std::cout << "Converting to SRT format..." << std::endl;
@@ -58,11 +72,11 @@ int run(int argc, char** argv)
     std::cout << "File written successfully!\n" << std::endl;
 
     // Absolute path where `transcript.srt` can be found.
-    std::string transcript_path = read_file("transcript-path.txt");
+    transcript_path = read_file("transcript-path.txt");
+Captioning:
     std::string caption_cmd = get_caption_cmd(argc, argv, hw_encoder, filename, encoding_flag, transcript_path);
     if (caption_cmd == "SRT_ONLY") {
-        std::string remove_cmd = "rm " + output;
-        res = OS::run_command(remove_cmd);
+        res = remove_temp_file(output);
         std::cout << "Captions written to 'transcript.srt'!\n" << std::endl;
         return res.first;
     }
@@ -74,5 +88,6 @@ int run(int argc, char** argv)
     res = remove_temp_file("transcript.srt");
     std::string remove_cmd = "rm " + output;
     res = OS::run_command(remove_cmd);
-    return res.first;
+
+    return 0;
 }
