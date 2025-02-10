@@ -94,7 +94,7 @@ std::string get_caption_cmd(int argc, char** argv, str_arg hw_encoder, str_arg f
 {
     std::string result;
     if (argc > 2) {
-        std::set<Flag> flags = parse_flags(argc, argv);
+        std::unordered_set<Flag> flags = parse_flags(argc, argv);
         if (flags.count(Flag::COMBINE)) {
             if (flags.count(Flag::BURN)) {
                 result = construct_burn_cmd(hw_encoder, filename, encoding_flag, transcript_path);
@@ -122,37 +122,6 @@ std::string get_caption_cmd(int argc, char** argv, str_arg hw_encoder, str_arg f
     }
     return result;
 }
-
-
-// std::string get_caption_cmd(int argc, char** argv, str_arg hw_encoder, str_arg filename, str_arg encoding_flag, str_arg transcript_path)
-// {
-//     std::string result;
-//     if (argc > 2) {
-//         Flag f = parse_flags(argc, argv);
-//         switch (f) {
-//         case Flag::BURN:
-//             result = construct_burn_cmd(hw_encoder, filename, encoding_flag, transcript_path);
-//             break;
-//         case Flag::SRT_ONLY:
-//             result = "SRT_ONLY";
-//             break;
-//         case Flag::COMBINE:
-            
-//         default:
-//             std::cout << "Invalid flag." << std::endl;
-//             break;
-//         }
-//     }
-//     else {
-//         result = format_str(
-//             "ffmpeg -y -i %s -i %s -c:v copy -c:a copy -c:s mov_text %s_w_captions.mp4",
-//             filename.c_str(),
-//             transcript_path.c_str(),
-//             get_output_name(filename).c_str()
-//         );
-//     }
-//     return result;
-// }
 
 std::string construct_burn_cmd(str_arg hw_encoder, str_arg filename, str_arg encoding_flag, str_arg transcript_path)
 {
@@ -195,9 +164,9 @@ void log_err_and_exit(str_arg text, str_arg err_message)
     exit(1);
 }
 
-std::set<Flag> parse_flags(int argc, char** argv) 
+std::unordered_set<Flag> parse_flags(int argc, char** argv) 
 {
-    std::set<Flag> result;
+    std::unordered_set<Flag> result;
     for (int i = 1; i < argc; i++) {
         std::string flag = get_flag(argv[i]);
         if (flag == "burn") result.insert(Flag::BURN);

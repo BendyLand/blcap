@@ -2,7 +2,7 @@
 
 #include <cstdarg>
 #include <fstream>
-#include <set>
+#include <unordered_set>
 #include "mystl.hpp"
 #include "os.hpp"
 
@@ -32,4 +32,4 @@ std::string get_extraction_cmd(str_arg hw_encoder, str_arg filename, str_arg enc
 std::pair<int, std::string> remove_temp_file(str_arg filepath);
 std::string get_transcript_path(int argc, char** argv);
 void log_err_and_exit(str_arg text, str_arg err_message);
-std::set<Flag> parse_flags(int argc, char** argv);
+std::unordered_set<Flag> parse_flags(int argc, char** argv);

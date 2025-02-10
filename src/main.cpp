@@ -36,7 +36,8 @@ int run(int argc, char** argv)
     hw_encoder = "auto";
     encoding_flag = " ";
 #endif
-    std::set<Flag> f = parse_flags(argc, argv);
+    std::unordered_set<Flag> f = parse_flags(argc, argv);
+    // Due to the goto jump, these variables need to be initialized before the switch.
     std::string transcript_path;
     std::pair<int, std::string> res;
     std::string extraction_cmd;
@@ -86,8 +87,7 @@ Captioning:
     else std::cerr << "An error occurred when adding captions.\n" << std::endl;
 
     res = remove_temp_file("transcript.srt");
-    std::string remove_cmd = "rm " + output;
-    res = OS::run_command(remove_cmd);
+    res = remove_temp_file(output);
 
     return 0;
 }
