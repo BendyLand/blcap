@@ -62,3 +62,5 @@ private:
 };
 
 std::vector<std::string> split(std::string str, char delim);
+std::vector<std::string> split_preserve_quotes(std::string str, char delim);
+

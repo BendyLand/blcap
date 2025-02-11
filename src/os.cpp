@@ -45,7 +45,16 @@ std::pair<int, std::string> OS::run_command_unix(const std::vector<std::string>&
         dup2(pipefd[1], STDOUT_FILENO);  // Redirect stdout to pipe write end
         dup2(pipefd[1], STDERR_FILENO);  // Optionally redirect stderr to pipe write end
         close(pipefd[1]);  // Close original write end after duplication
-        execvp(cargs[0], cargs.data());
+
+		std::string full_command;
+		for (const auto& arg : args) {
+			if (!full_command.empty()) full_command += " ";
+			full_command += arg;
+		}
+		const char* bash_args[] = {"/bin/bash", "-c", full_command.c_str(), nullptr};
+		execvp(bash_args[0], const_cast<char* const*>(bash_args));
+
+        // execvp(cargs[0], cargs.data());
         // execvp only returns if an error occurred
         perror("execvp failed");
         exit(EXIT_FAILURE);
@@ -154,7 +163,7 @@ std::pair<int, std::string> OS::run_command_windows(const std::string& command)
 std::pair<int, std::string> OS::run_command(std::string& arg)
 {
     std::pair<int, std::string> result;
-    std::vector<std::string> args = split(arg, ' ');
+    std::vector<std::string> args = split_preserve_quotes(arg, ' ');
     #if defined(OS_UNIX_LIKE)
         result = OS::run_command_unix(args);
     #else
@@ -178,3 +187,25 @@ std::vector<std::string> split(std::string str, char delim)
     if (temp.size() > 0) result.emplace_back(temp);
     return result;
 }
+
+std::vector<std::string> split_preserve_quotes(std::string str, char delim)
+{
+    std::vector<std::string> result;
+    std::string temp;
+    bool inside_quotes = false;
+
+    for (char c : str) {
+        if (c == '\"') {
+            inside_quotes = !inside_quotes;  // Toggle quote state
+        }
+        else if (c == delim && !inside_quotes) {
+            result.emplace_back(temp);
+            temp = "";
+            continue;
+        }
+        temp += c;
+    }
+    if (!temp.empty()) result.emplace_back(temp);
+    return result;
+}
+

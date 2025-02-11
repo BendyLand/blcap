@@ -28,7 +28,7 @@ int run(int argc, char** argv)
     encoding_flag = " -c:v h264_videotoolbox ";
 #elif defined(OS_LINUX)
     hw_encoder = "vaapi";
-    encoding_flag = " -c:v h264_vaapi -vf 'format=nv12,hwupload' ";
+    encoding_flag = "format=nv12,hwupload' -c:v h264_vaapi ";
 #elif defined(OS_WINDOWS)
     hw_encoder = "qsv";
     encoding_flag = " -c:v h264_qsv ";
@@ -43,6 +43,7 @@ int run(int argc, char** argv)
     std::string extraction_cmd;
     std::string whisper_cmd;
     std::string transcription;
+	my::string temp;
     switch (f.count(Flag::COMBINE)) {
     case 1: 
         transcript_path = get_transcript_path(argc, argv);
@@ -56,7 +57,8 @@ int run(int argc, char** argv)
     if (res.first != 0) log_err_and_exit("There was a problem extracting the transcript from the video.", res.second);
 
     // The whisper command is: <path>/<to>/whisper-cpp/build/bin/whisper-cli -m <path>/<to>/whisper-cpp/models/ggml-base.en.bin -f <WAV_file>
-    whisper_cmd = read_file("whisper-cmd.txt") + output;
+	temp = read_file("whisper-cmd.txt");
+    whisper_cmd = format_str("%s %s", temp.trim().str().c_str(), output.c_str());
     res = OS::run_command(whisper_cmd);
     if (res.first != 0) log_err_and_exit("There was a problem running Whisper.", res.second);
 
@@ -73,7 +75,8 @@ int run(int argc, char** argv)
     std::cout << "File written successfully!\n" << std::endl;
 
     // Absolute path where `transcript.srt` can be found.
-    transcript_path = read_file("transcript-path.txt");
+	temp = read_file("transcript-path.txt");
+    transcript_path = temp.trim();
 Captioning:
     std::string caption_cmd = get_caption_cmd(argc, argv, hw_encoder, filename, encoding_flag, transcript_path);
     if (caption_cmd == "SRT_ONLY") {
@@ -84,7 +87,10 @@ Captioning:
     std::cout << "Embedding captions..." << std::endl;
     res = OS::run_command(caption_cmd);
     if (res.first == 0) std::cout << "Captions added successfully!\n" << std::endl;
-    else std::cerr << "An error occurred when adding captions.\n" << std::endl;
+    else {
+		std::cerr << "An error occurred when adding captions.\n" << std::endl;
+		return 1;
+	}
 
     res = remove_temp_file("transcript.srt");
     res = remove_temp_file(output);

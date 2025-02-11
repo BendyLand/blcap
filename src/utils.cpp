@@ -126,6 +126,7 @@ std::string get_caption_cmd(int argc, char** argv, str_arg hw_encoder, str_arg f
 std::string construct_burn_cmd(str_arg hw_encoder, str_arg filename, str_arg encoding_flag, str_arg transcript_path)
 {
     std::string result;
+#if defined(OS_MACOS)
     result = format_str(
         "ffmpeg -y -hwaccel %s -i %s%s-vf subtitles=%s -c:a copy %s_w_captions.mp4",
         hw_encoder.c_str(),
@@ -134,6 +135,14 @@ std::string construct_burn_cmd(str_arg hw_encoder, str_arg filename, str_arg enc
         transcript_path.c_str(),
         get_output_name(filename).c_str()
     );
+#elif defined(OS_LINUX)
+    result = format_str(
+        "ffmpeg -y -i %s -vf 'subtitles=%s' -c:a copy %s_w_captions.mp4",
+        filename.c_str(),
+        transcript_path.c_str(),
+        get_output_name(filename).c_str()
+    );
+#endif
     return result;
 }
 
@@ -147,13 +156,22 @@ std::string get_flag(const char* arg)
 
 std::string get_extraction_cmd(str_arg hw_encoder, str_arg filename, str_arg encoding_flag, str_arg output)
 {
-    std::string result = format_str(
-        "ffmpeg -y -hwaccel %s -i %s%s-vn -acodec pcm_s16le -ar 16000 -ac 1 %s",
+    std::string result;
+#if defined(OS_MACOS)
+    result = format_str(
+        "ffmpeg -y -hwaccel %s -i %s%s-vn -acodec pcm_s16le -ar 16000 -ac 1 %s.wav",    
         hw_encoder.c_str(),
         filename.c_str(),
         encoding_flag.c_str(),
-        output.c_str()
+        get_output_name(filename).c_str()
     );
+#elif defined(OS_LINUX)
+    result = format_str(
+        "ffmpeg -y -i %s -vn -acodec pcm_s16le -ar 16000 -ac 1 %s.wav",    
+        filename.c_str(),
+        get_output_name(filename).c_str()
+    );
+#endif
     return result;
 }
 
@@ -196,3 +214,4 @@ std::string get_transcript_path(int argc, char** argv)
     std::cerr << "Unable to locate .srt file." << std::endl;
     exit(1);
 }
+
