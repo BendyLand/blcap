@@ -2,6 +2,7 @@ idea.txt
 src/whisper-cmd.txt
 src/transcript-path.txt
 src/test*
+src/video*
 src/transcript.srt
 whisper-cpp
 src/summary.txt
