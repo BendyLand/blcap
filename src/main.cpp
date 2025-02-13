@@ -26,9 +26,6 @@ int run(int argc, char** argv)
 #if defined(OS_MACOS)
     hw_encoder = "auto";
     encoding_flag = " -c:v h264_videotoolbox ";
-#elif defined(OS_LINUX)
-    hw_encoder = "vaapi";
-    encoding_flag = "format=nv12,hwupload' -c:v h264_vaapi ";
 #elif defined(OS_WINDOWS)
     hw_encoder = "qsv";
     encoding_flag = " -c:v h264_qsv ";
