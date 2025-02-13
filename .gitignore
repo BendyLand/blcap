@@ -3,6 +3,6 @@ src/whisper-cmd.txt
 src/transcript-path.txt
 src/test*
 src/video*
-src/transcript.srt
+src/*.srt
 whisper-cpp
 src/summary.txt

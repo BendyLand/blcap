@@ -54,7 +54,6 @@ std::pair<int, std::string> OS::run_command_unix(const std::vector<std::string>&
 		const char* bash_args[] = {"/bin/bash", "-c", full_command.c_str(), nullptr};
 		execvp(bash_args[0], const_cast<char* const*>(bash_args));
 
-        // execvp(cargs[0], cargs.data());
         // execvp only returns if an error occurred
         perror("execvp failed");
         exit(EXIT_FAILURE);
