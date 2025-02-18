@@ -53,7 +53,7 @@ int run(int argc, char** argv)
     res = OS::run_command(extraction_cmd);
     if (res.first != 0) log_err_and_exit("There was a problem extracting the transcript from the video.", res.second);
 
-    // The whisper command is: <path>/<to>/whisper-cpp/build/bin/whisper-cli -m <path>/<to>/whisper-cpp/models/ggml-base.en.bin -f <WAV_file>
+    // The whisper command is: <path>/<to>/blcap/whisper.cpp/build/bin/whisper-cli -m <path>/<to>/blcap/whisper-cpp/models/ggml-base.en.bin -f
 	temp = read_file("whisper-cmd.txt");
     whisper_cmd = format_str("%s %s", temp.trim().str().c_str(), output.c_str());
     res = OS::run_command(whisper_cmd);
@@ -71,7 +71,7 @@ int run(int argc, char** argv)
     write_file("transcript.srt", transcription);
     std::cout << "File written successfully!\n" << std::endl;
 
-    // Absolute path where `transcript.srt` can be found.
+    // Absolute path where `transcript.srt` can be found. It should just be <path>/<to>/blcap/src/transcript.srt
 	temp = read_file("transcript-path.txt");
     transcript_path = temp.trim();
 Captioning:
