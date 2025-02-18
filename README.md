@@ -34,7 +34,7 @@ sudo apt install ffmpeg
 # Arch
 sudo pacman -S ffmpeg
 # Fedora
-sudo dnf install 
+sudo dnf install ffmpeg
 ```
 ```bash
 # Windows
